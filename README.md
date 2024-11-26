@@ -10,7 +10,7 @@ $ source venv/bin/activate
 $ pip install limepkg-metabase==1.4.0.dev2 --index-url https://pypi.lime.tech/simple/
 $ pip install -r requirements.txt
 ```
-3. Get an `.env` from Roger.
+3. Get an `.env` from Roger. See below for an example file.
 4. Add a session cookie for consul to the `.env` file.
 
 ## How to run export test
@@ -33,3 +33,31 @@ This will loop over all applications in the `application-<ENVIRONMENT>.json` and
 
 The result of the export will be saved as `export_status` for each application in the file.
 
+## Sample .env file
+
+```yaml
+CLOUD_ADMIN_API_KEY = ""
+CLOUD_ADMIN_ENDPOINT = ""
+
+# CONSUL
+CONSUL_COOKIE_PROD = ""
+CONSUL_SERVER_PROD = ""
+
+CONSUL_COOKIE_TESTING = ""
+CONSUL_SERVER_TESTING = ""
+
+# Metabase
+METABASE_PRODUCTION_ADMIN_USERNAME = ""
+METABASE_PRODUCTION_ADMIN_PASSWORD = ""
+METABASE_PRODUCTION_METABASE_URL = ""
+
+METABASE_TESTING_ADMIN_USERNAME = ""
+METABASE_TESTING_ADMIN_PASSWORD = ""
+METABASE_TESTING_METABASE_URL = ""
+
+# LAMBDA LimeBI App Credentials
+LAMBDA_PRODUCTION_API_KEY = ""
+LAMBDA_PRODUCTION_ENDPOINT = ""
+LAMBDA_TESTING_API_KEY = ""
+LAMBDA_TESTING_ENDPOINT = ""
+```
