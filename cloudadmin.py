@@ -98,7 +98,7 @@ class CloudAdminClient:
             )
         else:
             query["filter"]["exp"].append(
-                {"key": "lime_bi_production", "op": "!=", "exp": "testing"}
+                {"key": "swarm_environment", "op": "!=", "exp": "testing"}
             )
 
         params = "q=" + json.dumps(query)
@@ -106,6 +106,7 @@ class CloudAdminClient:
             "x-api-key": self.api_key,
             "accept": "application/hal+json",
         }
+
         response = requests.get(url=url, headers=headers, params=params)
         result = json.loads(response.text)
 
