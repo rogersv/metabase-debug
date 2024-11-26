@@ -1,8 +1,41 @@
-Create a venv and run `pip install -r requirements.txt`
+## First do this
 
-Create a .env in the root with:
-
+1. Create and activate a venv:
+```bash
+$ python -m venv venv
+$ source venv/bin/activate 
+``` 
+2. Install packages. If you dont have access to pypi.lime.tech in the venv install limepkg-metabase first:
+```bash
+$ pip install limepkg-metabase==1.4.0.dev2 --index-url https://pypi.lime.tech/simple/
+$ pip install -r requirements.txt
 ```
+3. Get an `.env` from Roger. See below for an example file.
+4. Add a session cookie for consul to the `.env` file.
+
+## How to run export test
+
+To create a file with appliction data that can be used for testing export do:
+
+```bash
+$ python main.py load-applications -e <ENVIRONMENT>
+```
+
+`ENVIRONMENT` can be either `testing` or `production`. Applications will be stored in a file called `application-<ENVIRONMENT>.json`.
+
+To run the export command use
+
+```bash
+$ python main.py test-export -e <ENVIRONMENT>
+```
+
+This will loop over all applications in the `application-<ENVIRONMENT>.json` and invoke the export API in limepkg-metabase. 
+
+The result of the export will be saved as `export_status` for each application in the file.
+
+## Sample .env file
+
+```yaml
 CLOUD_ADMIN_API_KEY = ""
 CLOUD_ADMIN_ENDPOINT = ""
 
@@ -28,10 +61,3 @@ LAMBDA_PRODUCTION_ENDPOINT = ""
 LAMBDA_TESTING_API_KEY = ""
 LAMBDA_TESTING_ENDPOINT = ""
 ```
-
-Usage:
-
-`python main.py load-applications -e testing` - creates a json-file with the applications for testing-environment
-`python main.py load-applications -e production`  - same as previous but for production
-`python main.py test-export -e testing` - uses the application file when the test is run. The result of the test is added to the same file, e.g., `"export_status": "failed"`. If there is already an export_status, the app is ignored the next time an export is performed. If you want to run it again, you need to remove the "export_status" line. The same applies to `private_collection_export_status`.
-`python main.py test-export -e production`  - same as previous but for production
