@@ -28,7 +28,9 @@ class ConsulClient:
         elif response.status_code == 404:
             return {}
         else:
-            raise Exception(f"Failed to get value from consul: {response.status_code}")
+            raise Exception(
+                f"Failed to get value from consul: {response.status_code}"
+            )
 
     def get_application_config(self, application_id):
         endpoint = f"applications/{application_id}/application_config?raw"

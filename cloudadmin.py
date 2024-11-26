@@ -41,7 +41,9 @@ class CloudAdminClient:
 
         return result["objects"][0].get("uid")
 
-    def get_application_uid_by_docker_swarm_id(self, docker_swarm_id: str) -> str:
+    def get_application_uid_by_docker_swarm_id(
+        self, docker_swarm_id: str
+    ) -> str:
 
         url = f"{self.domain}/api/v1/query/"
         query = {
@@ -71,7 +73,9 @@ class CloudAdminClient:
 
         return result["objects"][0].get("uid")
 
-    def get_all_docker_swarm_applications(self, environment: str = "testing") -> str:
+    def get_all_docker_swarm_applications(
+        self, environment: str = "testing"
+    ) -> str:
 
         url = f"{self.domain}/api/v1/query/"
         query = {

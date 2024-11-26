@@ -8,8 +8,10 @@ import requests
 from dotenv import load_dotenv
 from limepkg_metabase.api_client import MetabaseClient, MetabaseClientFactory
 from limepkg_metabase.authentication.credentials import CloudCredentials
-from limepkg_metabase.serialization import (export_collection,
-                                            export_personal_collections)
+from limepkg_metabase.serialization import (
+    export_collection,
+    export_personal_collections,
+)
 
 from cloudadmin import CloudAdminClient
 from consul import ConsulClient
@@ -52,7 +54,9 @@ class MetabaseCloudClientFactory(MetabaseClientFactory):
         self.app_user_username = app_user_username
         self.app_user_password = app_user_password
         self.secrets_path = "/run/secrets/"
-        self.credentials = CloudCredentials(app_identifier, self.secrets_path, None)
+        self.credentials = CloudCredentials(
+            app_identifier, self.secrets_path, None
+        )
 
     def create_admin_client(self):
         return MetabaseClient(
@@ -176,8 +180,12 @@ def get_applications_from_cloud_admin(
 ):
     apps = load_application_data(environment)
 
-    cloud_admin_client = CloudAdminClient(CLOUD_ADMIN_API_KEY, CLOUD_ADMIN_ENDPOINT)
-    found_apps = cloud_admin_client.get_all_docker_swarm_applications(environment)
+    cloud_admin_client = CloudAdminClient(
+        CLOUD_ADMIN_API_KEY, CLOUD_ADMIN_ENDPOINT
+    )
+    found_apps = cloud_admin_client.get_all_docker_swarm_applications(
+        environment
+    )
     for found_app in found_apps:
         identifier = found_app["identifier"]
 
@@ -187,7 +195,9 @@ def get_applications_from_cloud_admin(
         lime_bi_config = None
 
         if "lime_bi_config" not in apps[identifier]:
-            lime_bi_config = fetch_lime_bi_config(identifier, environment, found_app)
+            lime_bi_config = fetch_lime_bi_config(
+                identifier, environment, found_app
+            )
 
             if lime_bi_config:
                 apps[identifier]["lime_bi_config"] = lime_bi_config
@@ -218,7 +228,7 @@ def fetch_lime_bi_config(identifier, environment, found_app):
         except Exception:
             return "Missing"
     else:
-        return get_lime_bi_config(identifier)
+        return get_lime_bi_config(identifier, environment)
 
 
 def fetch_app_user(lambda_credentials, identifier):
@@ -230,7 +240,9 @@ def fetch_app_user(lambda_credentials, identifier):
     return json.loads(response.text)
 
 
-def test_export_for_apps(lime_bi_credentials: dict, environment: str = "testing"):
+def test_export_for_apps(
+    lime_bi_credentials: dict, environment: str = "testing"
+):
     apps = load_application_data(environment)
 
     for app_id, application in apps.items():
@@ -271,15 +283,21 @@ def test_export_for_apps(lime_bi_credentials: dict, environment: str = "testing"
         save_application_data(apps, environment)
 
 
-def get_lime_bi_config(docker_swarm_application_id: str, environment="testing"):
+def get_lime_bi_config(
+    docker_swarm_application_id: str, environment="testing"
+):
     if environment == "testing":
-        consul_client = ConsulClient(CONSUL_COOKIE_TESTING, CONSUL_SERVER_TESTING)
+        consul_client = ConsulClient(
+            CONSUL_COOKIE_TESTING, CONSUL_SERVER_TESTING
+        )
     elif environment == "production":
         consul_client = ConsulClient(CONSUL_COOKIE_PROD, CONSUL_SERVER_PROD)
     else:
         raise Exception(f"Invalid environment: {environment}")
 
-    swarm_config = consul_client.get_application_config(docker_swarm_application_id)
+    swarm_config = consul_client.get_application_config(
+        docker_swarm_application_id
+    )
     config = swarm_config.get("config", {})
     if not config:
         return {}
