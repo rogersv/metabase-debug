@@ -11,6 +11,7 @@ $ pip install limepkg-metabase==1.4.0.dev2 --index-url https://pypi.lime.tech/si
 $ pip install -r requirements.txt
 ```
 3. Get an `.env` from Roger.
+4. Add a session cookie for consul to the `.env` file.
 
 ## How to run export test
 
