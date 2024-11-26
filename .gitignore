@@ -1,0 +1,10 @@
+.env
+venv
+export/
+personal_collections/
+*.tar.gz
+__pycache__/
+*.bak
+debug.txt
+*.json
+backup/
