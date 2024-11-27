@@ -8,8 +8,9 @@ import requests
 from dotenv import load_dotenv
 from limepkg_metabase.api_client import MetabaseClient, MetabaseClientFactory
 from limepkg_metabase.authentication.credentials import CloudCredentials
+from limepkg_metabase.errors import ExportError
 from limepkg_metabase.serialization import (
-    export_collection,
+    export_all_collections, export_collection,
     export_personal_collections,
 )
 
@@ -115,64 +116,20 @@ def export_collection_from_lime_bi(
         f" and app_user_username: {user_client.username}"
         f" and app_user metabase_url: {user_client.metabase_url}"
     )
-    with export_collection(
-        client_factory=client_factory,
-        collection_id=app_information["lime_bi_config"]["collection_id"],
-        database_id=app_information["lime_bi_config"]["database_id"],
-    ) as tarball:
-        source = Path(tarball)
-        dest = Path(COLLECTION_FILE_NAME)
-        dest.write_bytes(source.read_bytes())
-
-    return validate_export_file(app_id, COLLECTION_FILE_NAME)
-
-
-def export_personal_collections_from_lime_bi(
-    app_id: str, app_information: dict, lime_bi_credentials: dict
-):
-    client_factory = MetabaseCloudClientFactory(
-        app_identifier=app_id,
-        admin_username=lime_bi_credentials["admin_username"],
-        admin_password=lime_bi_credentials["admin_password"],
-        metabase_url=lime_bi_credentials["metabase_url"],
-        app_user_username=app_information["app_user_username"],
-        app_user_password=app_information["app_user_password"],
-    )
-
-    with export_personal_collections(
-        client_factory=client_factory,
-        group_id=app_information["lime_bi_config"]["group_id"],
-        database_id=app_information["lime_bi_config"]["database_id"],
-    ) as tarball:
-        source = Path(tarball)
-        dest = Path(PERSONAL_COLLECTION_FILE_NAME)
-        dest.write_bytes(source.read_bytes())
-
-    return validate_export_file(app_id, PERSONAL_COLLECTION_FILE_NAME)
-
-
-def validate_export_file(app_id: str, tar_file: str):
-    global export_result
-    with tarfile.open(tar_file, "r") as tar:
-        tar.extractall(path="extracted_files")
-
-    # Look for export.log and scan for the text "Failed"
-    log_file_path = Path("extracted_files/lime_bi_collections/export.log")
-    if log_file_path.exists():
-        with log_file_path.open("r") as log_file:
-            failed = False
-            for line in log_file:
-                if "Failed" in line:
-                    failed = True
-                    break
-            if failed:
-                return "failed"
-            else:
-                return "succeeded"
-    else:
+    try:
+        with export_all_collections(
+                client_factory=client_factory,
+                collection_id=app_information["lime_bi_config"]["collection_id"],
+                group_id=app_information["lime_bi_config"]["group_id"],
+                database_id=app_information["lime_bi_config"]["database_id"],
+        ) as tarball:
+            source = Path(tarball)
+            dest = Path(COLLECTION_FILE_NAME)
+            dest.write_bytes(source.read_bytes())
+            return "succeeded"
+    except ExportError as e:
+        logger.exception(e)
         return "failed"
-
-    # shutil.rmtree('extracted_files')
 
 
 def get_applications_from_cloud_admin(
@@ -262,23 +219,6 @@ def test_export_for_apps(
                     apps[app_id]["export_status"] = "failed"
             else:
                 apps[app_id]["export_status"] = "failed"
-
-        if "private_collection_export_status" not in application:
-            if (
-                apps[app_id]["lime_bi_config"] != "Missing"
-                and apps[app_id]["app_user_username"] != "Missing"
-            ):
-                print(app_id)
-                try:
-                    result = export_personal_collections_from_lime_bi(
-                        app_id, application, lime_bi_credentials
-                    )
-                    apps[app_id]["private_collection_export_status"] = result
-                except Exception as e:
-                    logger.exception(e)
-                    apps[app_id]["private_collection_export_status"] = "failed"
-            else:
-                apps[app_id]["private_collection_export_status"] = "failed"
 
         save_application_data(apps, environment)
 
