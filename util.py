@@ -10,8 +10,7 @@ from limepkg_metabase.api_client import MetabaseClient, MetabaseClientFactory
 from limepkg_metabase.authentication.credentials import CloudCredentials
 from limepkg_metabase.errors import ExportError
 from limepkg_metabase.serialization import (
-    export_all_collections, export_collection,
-    export_personal_collections,
+    export_all_collections, import_all_collections,
 )
 
 from cloudadmin import CloudAdminClient
@@ -90,6 +89,45 @@ def load_application_data(environment: str = "testing"):
 def save_application_data(applications, environment: str = "testing"):
     with open(f"applications-{environment}.json", "w") as file:
         json.dump(applications, file)
+
+
+def import_collection_to_lime_bi(
+    app_id: str, app_information: dict, lime_bi_credentials: dict
+):
+    client_factory = MetabaseCloudClientFactory(
+        app_id,
+        lime_bi_credentials["admin_username"],
+        lime_bi_credentials["admin_password"],
+        lime_bi_credentials["metabase_url"],
+        app_user_username=app_information["app_user_username"],
+        app_user_password=app_information["app_user_password"],
+    )
+
+    # create clients for debug purpose
+    admin_client = client_factory.create_admin_client()
+    user_client = client_factory.create_app_user_client()
+
+    logger.info(
+        "Importing Lime BI collections"
+        f" using metabase_url: {client_factory.metabase_url}"
+        f" and admin_username: {admin_client.username}"
+        f" and admin metabase_url: {admin_client.metabase_url}"
+        f" and app_user_username: {user_client.username}"
+        f" and app_user metabase_url: {user_client.metabase_url}"
+    )
+    try:
+        widgets = import_all_collections(
+            client_factory=client_factory,
+            collection_id=app_information["lime_bi_config"]["collection_id"],
+            group_id=app_information["lime_bi_config"]["group_id"],
+            database_id=app_information["lime_bi_config"]["database_id"],
+            tarball_path=COLLECTION_FILE_NAME,
+            app_identifier=app_id,
+        )
+        print(widgets)
+    except ExportError as e:
+        logger.exception(e)
+        return "failed"
 
 
 def export_collection_from_lime_bi(
