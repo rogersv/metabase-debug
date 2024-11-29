@@ -10,7 +10,7 @@ flake8==7.1.1
 idna==3.10
 isort==5.13.2
 jmespath==1.0.1
-limepkg-metabase==1.4.0-dev.3
+limepkg-metabase==1.4.0-dev.4
 mccabe==0.7.0
 mypy-extensions==1.0.0
 packaging==24.2
