@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-import tarfile
+import re
 from pathlib import Path
 
 import requests
@@ -9,8 +9,10 @@ from dotenv import load_dotenv
 from limepkg_metabase.api_client import MetabaseClient, MetabaseClientFactory
 from limepkg_metabase.authentication.credentials import CloudCredentials
 from limepkg_metabase.errors import ExportError
+from limepkg_metabase.segments.segment_mapper import SegmentMapper
 from limepkg_metabase.serialization import (
-    export_all_collections, import_all_collections,
+    export_all_collections,
+    import_all_collections,
 )
 
 from cloudadmin import CloudAdminClient
@@ -156,10 +158,10 @@ def export_collection_from_lime_bi(
     )
     try:
         with export_all_collections(
-                client_factory=client_factory,
-                collection_id=app_information["lime_bi_config"]["collection_id"],
-                group_id=app_information["lime_bi_config"]["group_id"],
-                database_id=app_information["lime_bi_config"]["database_id"],
+            client_factory=client_factory,
+            collection_id=app_information["lime_bi_config"]["collection_id"],
+            group_id=app_information["lime_bi_config"]["group_id"],
+            database_id=app_information["lime_bi_config"]["database_id"],
         ) as tarball:
             source = Path(tarball)
             dest = Path(COLLECTION_FILE_NAME)
@@ -249,7 +251,7 @@ def test_export_for_apps(
                 print(app_id)
                 try:
                     result = export_collection_from_lime_bi(
-                        app_id, application, lime_bi_credentials
+                        app_id, application, lime_bi_credentials[environment]
                     )
                     apps[app_id]["export_status"] = result
                 except Exception as e:
@@ -280,3 +282,95 @@ def get_lime_bi_config(
     if not config:
         return {}
     return config.get("lime-bi", {})
+
+
+def remove_all_segments_in_files(temp_dir):
+    file_path = f"{temp_dir}/lime_bi_collections/"
+    for root, _, files in os.walk(file_path):
+        for file in files:
+            if file.endswith(".yaml") or file.endswith(".yml"):
+                full_path = os.path.join(root, file)
+                print(full_path)
+                with open(full_path, "r") as f:
+                    content = f.read()
+                    content = content.replace("- =", '- "="')
+                    modified_content = remove_segment_filters(content)
+                with open(full_path, "w") as f:
+                    f.write(modified_content)
+
+
+def remove_segment_filters(yaml_content):
+    pattern = r"^\s*- - segment\n(?:^\s+- .+\n)*"
+
+    # Remove the matched filters
+    modified_text = re.sub(pattern, "", yaml_content, flags=re.MULTILINE)
+
+    return modified_text
+
+
+def replace_segments(
+    source_client_factory: MetabaseClientFactory,
+    destination_client_factory: MetabaseClientFactory,
+    source_database_id,
+    destination_database_id,
+    export_tarfile_path="export.tar.gz",
+):
+
+    database_segment_mapper = SegmentMapper(
+        source_client_factory=source_client_factory,
+        destination_client_factory=destination_client_factory,
+        source_database_id=source_database_id,
+        destination_database_id=destination_database_id,
+    )
+
+    database_segment_mapper.replace_segment_ids_in_tarfile(export_tarfile_path)
+
+
+def get_table_metadata(user_client, env):
+    file_path = f"database-metadata-tables-{env}.json"
+
+    if os.path.exists(file_path):
+        with open(file_path, "r") as file:
+            all_tables = json.load(file)
+    else:
+        all_tables = user_client.get_tables()
+        with open(file_path, "w") as file:
+            json.dump(all_tables, file)
+
+    return all_tables
+
+
+def get_database_metadata(user_client: MetabaseClient, database_id):
+
+    tables = user_client.get_tables()
+
+    database_metadata = {
+        "table_ids": [],
+        "tables": {},
+    }
+
+    for table in tables:
+        # make sure it is the correct database_id
+        if table["db_id"] == database_id:
+            database_metadata["table_ids"].append(table["id"])
+            if table["id"] not in database_metadata["tables"]:
+                database_metadata["tables"][table["id"]] = {
+                    "table_info": {},
+                    "segments": {},
+                }
+            database_metadata["tables"][table["id"]]["table_info"] = table
+
+    all_segments = user_client.get_segments()
+    for segment in all_segments:
+        if segment["table_id"] in database_metadata["table_ids"]:
+            database_metadata["tables"][segment["table_id"]]["segments"][
+                segment["description"]
+            ] = segment
+
+    for table in tables:
+        if not table["id"] in database_metadata["tables"]:
+            continue
+        if not database_metadata["tables"][table["id"]]["segments"]:
+            del database_metadata["tables"][table["id"]]
+
+    return database_metadata
